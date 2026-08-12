@@ -1,0 +1,215 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [{ "name": "_platformFeeBps", "type": "uint256" }],
+    "stateMutability": "nonpayable"
+  },
+  { "type": "error", "name": "NotModelOwner", "inputs": [] },
+  { "type": "error", "name": "ModelNotFound", "inputs": [] },
+  { "type": "error", "name": "AlreadyLicensed", "inputs": [] },
+  { "type": "error", "name": "InsufficientPayment", "inputs": [] },
+  { "type": "error", "name": "NotLicensed", "inputs": [] },
+  { "type": "error", "name": "AlreadyRated", "inputs": [] },
+  { "type": "error", "name": "InvalidRating", "inputs": [] },
+  { "type": "error", "name": "TransferFailed", "inputs": [] },
+  {
+    "type": "event",
+    "name": "ModelRegistered",
+    "anonymous": false,
+    "inputs": [
+      { "name": "modelId", "type": "uint256", "indexed": true },
+      { "name": "owner", "type": "address", "indexed": true },
+      { "name": "ipfsHash", "type": "string", "indexed": false },
+      { "name": "price", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "VersionAdded",
+    "anonymous": false,
+    "inputs": [
+      { "name": "modelId", "type": "uint256", "indexed": true },
+      { "name": "ipfsHash", "type": "string", "indexed": false },
+      { "name": "note", "type": "string", "indexed": false },
+      { "name": "timestamp", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "LicensePurchased",
+    "anonymous": false,
+    "inputs": [
+      { "name": "modelId", "type": "uint256", "indexed": true },
+      { "name": "buyer", "type": "address", "indexed": true },
+      { "name": "amountPaid", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "ModelRated",
+    "anonymous": false,
+    "inputs": [
+      { "name": "modelId", "type": "uint256", "indexed": true },
+      { "name": "buyer", "type": "address", "indexed": true },
+      { "name": "rating", "type": "uint8", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "PriceUpdated",
+    "anonymous": false,
+    "inputs": [
+      { "name": "modelId", "type": "uint256", "indexed": true },
+      { "name": "newPrice", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "registerModel",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "name", "type": "string" },
+      { "name": "ipfsHash", "type": "string" },
+      { "name": "price", "type": "uint256" },
+      { "name": "licenseType", "type": "string" }
+    ],
+    "outputs": [{ "name": "modelId", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "addVersion",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "modelId", "type": "uint256" },
+      { "name": "ipfsHash", "type": "string" },
+      { "name": "note", "type": "string" }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "updatePrice",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "modelId", "type": "uint256" },
+      { "name": "newPrice", "type": "uint256" }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "purchaseLicense",
+    "stateMutability": "payable",
+    "inputs": [{ "name": "modelId", "type": "uint256" }],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "rateModel",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "modelId", "type": "uint256" },
+      { "name": "rating", "type": "uint8" }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "getVersions",
+    "stateMutability": "view",
+    "inputs": [{ "name": "modelId", "type": "uint256" }],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "components": [
+          { "name": "ipfsHash", "type": "string" },
+          { "name": "note", "type": "string" },
+          { "name": "timestamp", "type": "uint256" }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "getVersionCount",
+    "stateMutability": "view",
+    "inputs": [{ "name": "modelId", "type": "uint256" }],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "getAverageRatingBps",
+    "stateMutability": "view",
+    "inputs": [{ "name": "modelId", "type": "uint256" }],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "getRatingCount",
+    "stateMutability": "view",
+    "inputs": [{ "name": "modelId", "type": "uint256" }],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "models",
+    "stateMutability": "view",
+    "inputs": [{ "name": "", "type": "uint256" }],
+    "outputs": [
+      { "name": "owner", "type": "address" },
+      { "name": "exists", "type": "bool" },
+      { "name": "price", "type": "uint256" },
+      { "name": "name", "type": "string" },
+      { "name": "licenseType", "type": "string" }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "hasLicense",
+    "stateMutability": "view",
+    "inputs": [
+      { "name": "", "type": "uint256" },
+      { "name": "", "type": "address" }
+    ],
+    "outputs": [{ "name": "", "type": "bool" }]
+  },
+  {
+    "type": "function",
+    "name": "ratingOf",
+    "stateMutability": "view",
+    "inputs": [
+      { "name": "", "type": "uint256" },
+      { "name": "", "type": "address" }
+    ],
+    "outputs": [{ "name": "", "type": "uint8" }]
+  },
+  {
+    "type": "function",
+    "name": "ratingSum",
+    "stateMutability": "view",
+    "inputs": [{ "name": "", "type": "uint256" }],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "nextModelId",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "platformOwner",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address" }]
+  },
+  {
+    "type": "function",
+    "name": "platformFeeBps",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  }
+]

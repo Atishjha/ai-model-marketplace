@@ -1,19 +1,22 @@
 """
 Polling event indexer.
 
-Watches ModelRegistry for ModelRegistered / VersionUpdated / LicensePurchased / Rated
-events and mirrors them into Postgres so the API layer never has to touch the chain
-for reads. Runs as an asyncio background task started from main.py's lifespan.
+Watches ModelRegistry for ModelRegistered / VersionAdded / LicensePurchased /
+ModelRated / PriceUpdated events and mirrors them into Postgres so the API
+layer never has to touch the chain for reads. Runs as an asyncio background
+task started from main.py's lifespan.
 
-NOTE ON EVENT SIGNATURES: adjust the field names below (`modelId`, `ipfsHash`, etc.)
-to match whatever you actually named the event args in ModelRegistry.sol. What's
-assumed here:
+Event signatures below match the actual deployed ModelRegistry.sol (Phase 1):
 
-    event ModelRegistered(uint256 indexed modelId, address indexed owner,
-                           string ipfsHash, uint256 price, string licenseType);
-    event VersionUpdated(uint256 indexed modelId, uint256 versionNumber, string ipfsHash);
-    event LicensePurchased(uint256 indexed modelId, address indexed buyer, uint256 price);
-    event Rated(uint256 indexed modelId, address indexed rater, uint8 score);
+    event ModelRegistered(uint256 indexed modelId, address indexed owner, string ipfsHash, uint256 price);
+    event VersionAdded(uint256 indexed modelId, string ipfsHash, string note, uint256 timestamp);
+    event LicensePurchased(uint256 indexed modelId, address indexed buyer, uint256 amountPaid);
+    event ModelRated(uint256 indexed modelId, address indexed buyer, uint8 rating);
+    event PriceUpdated(uint256 indexed modelId, uint256 newPrice);
+
+Note ModelRegistered deliberately doesn't carry name/licenseType (kept out of
+the event to save gas) — _on_model_registered pulls those via the contract's
+free `models(modelId)` view call instead.
 """
 
 import asyncio
@@ -91,9 +94,10 @@ class EventListener:
         """Sync web3 calls — run in executor since web3.py's HTTP provider is blocking."""
         events = [
             self.contract.events.ModelRegistered,
-            self.contract.events.VersionUpdated,
+            self.contract.events.VersionAdded,
             self.contract.events.LicensePurchased,
-            self.contract.events.Rated,
+            self.contract.events.ModelRated,
+            self.contract.events.PriceUpdated,
         ]
         all_logs = []
         for event in events:
@@ -108,9 +112,10 @@ class EventListener:
         args = log["args"]
         handler = {
             "ModelRegistered": self._on_model_registered,
-            "VersionUpdated": self._on_version_updated,
+            "VersionAdded": self._on_version_added,
             "LicensePurchased": self._on_license_purchased,
-            "Rated": self._on_rated,
+            "ModelRated": self._on_model_rated,
+            "PriceUpdated": self._on_price_updated,
         }.get(name)
         if handler is None:
             logger.warning("Unhandled event type: %s", name)
@@ -118,15 +123,23 @@ class EventListener:
         await handler(db, args, log)
 
     async def _on_model_registered(self, db: AsyncSession, args, log) -> None:
+        loop = asyncio.get_running_loop()
+        # name/licenseType aren't in the event — fetch the full struct via
+        # the contract's free view call instead.
+        owner, _exists, price, name, license_type = await loop.run_in_executor(
+            None, lambda: self.contract.functions.models(args["modelId"]).call()
+        )
+
         stmt = (
             pg_insert(Model)
             .values(
                 on_chain_id=args["modelId"],
-                owner_address=args["owner"],
+                owner_address=owner,
+                name=name,
+                license_type=license_type,
                 latest_ipfs_hash=args["ipfsHash"],
                 latest_version=1,
-                price_wei=args["price"],
-                license_type=args["licenseType"],
+                price_wei=price,
                 registered_at_block=log["blockNumber"],
             )
             .on_conflict_do_nothing(index_elements=["on_chain_id"])
@@ -140,23 +153,26 @@ class EventListener:
                     model_id=model.id,
                     version_number=1,
                     ipfs_hash=args["ipfsHash"],
+                    note="initial release",
                     tx_hash=log["transactionHash"].hex(),
                     block_number=log["blockNumber"],
                 )
             )
 
-    async def _on_version_updated(self, db: AsyncSession, args, log) -> None:
+    async def _on_version_added(self, db: AsyncSession, args, log) -> None:
         model = await self._get_model(db, args["modelId"])
         if not model:
-            logger.warning("VersionUpdated for unknown model %s — registration event missed?", args["modelId"])
+            logger.warning("VersionAdded for unknown model %s — registration event missed?", args["modelId"])
             return
+        next_version = model.latest_version + 1
         model.latest_ipfs_hash = args["ipfsHash"]
-        model.latest_version = args["versionNumber"]
+        model.latest_version = next_version
         db.add(
             ModelVersion(
                 model_id=model.id,
-                version_number=args["versionNumber"],
+                version_number=next_version,
                 ipfs_hash=args["ipfsHash"],
+                note=args["note"],
                 tx_hash=log["transactionHash"].hex(),
                 block_number=log["blockNumber"],
             )
@@ -172,7 +188,7 @@ class EventListener:
             .values(
                 model_id=model.id,
                 buyer_address=args["buyer"],
-                price_paid_wei=args["price"],
+                price_paid_wei=args["amountPaid"],
                 tx_hash=log["transactionHash"].hex(),
                 block_number=log["blockNumber"],
             )
@@ -180,26 +196,35 @@ class EventListener:
         )
         await db.execute(stmt)
 
-    async def _on_rated(self, db: AsyncSession, args, log) -> None:
+    async def _on_model_rated(self, db: AsyncSession, args, log) -> None:
         model = await self._get_model(db, args["modelId"])
         if not model:
-            logger.warning("Rated for unknown model %s", args["modelId"])
+            logger.warning("ModelRated for unknown model %s", args["modelId"])
             return
         stmt = (
             pg_insert(Rating)
             .values(
                 model_id=model.id,
-                rater_address=args["rater"],
-                score=args["score"],
+                rater_address=args["buyer"],
+                score=args["rating"],
                 tx_hash=log["transactionHash"].hex(),
                 block_number=log["blockNumber"],
             )
             .on_conflict_do_update(
                 index_elements=["model_id", "rater_address"],
-                set_={"score": args["score"], "tx_hash": log["transactionHash"].hex()},
+                set_={"score": args["rating"], "tx_hash": log["transactionHash"].hex()},
             )
         )
         await db.execute(stmt)
+
+    async def _on_price_updated(self, db: AsyncSession, args, log) -> None:
+        # Missing from the original: without this, a model's price goes
+        # stale in Postgres the moment the owner calls updatePrice() on-chain.
+        model = await self._get_model(db, args["modelId"])
+        if not model:
+            logger.warning("PriceUpdated for unknown model %s", args["modelId"])
+            return
+        model.price_wei = args["newPrice"]
 
     async def _get_model(self, db: AsyncSession, on_chain_id: int) -> Model | None:
         result = await db.execute(select(Model).where(Model.on_chain_id == on_chain_id))

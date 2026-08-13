@@ -11,8 +11,17 @@ async function main() {
   await registry.waitForDeployment();
 
   const address = await registry.getAddress();
+  const deployTx = registry.deploymentTransaction();
+  const receipt = await deployTx.wait();
+
   console.log("ModelRegistry deployed to:", address);
-  console.log("Save this address into backend/.env and frontend/.env as CONTRACT_ADDRESS");
+  console.log("Deployed at block:", receipt.blockNumber);
+  console.log("");
+  console.log("Save into backend/.env:");
+  console.log(`  CONTRACT_ADDRESS=${address}`);
+  console.log(`  INDEXER_START_BLOCK=${receipt.blockNumber}`);
+  console.log("Save into frontend/.env:");
+  console.log(`  VITE_CONTRACT_ADDRESS=${address}`);
 }
 
 main().catch((error) => {

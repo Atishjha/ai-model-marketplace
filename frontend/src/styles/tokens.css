@@ -1,0 +1,140 @@
+:root {
+  /* Color — deep ink ground (not near-black), warm copper signal for
+     value/ownership actions, cool slate for on-chain/verified states */
+  --ink-900: #0e1512;
+  --ink-800: #16201c;
+  --ink-700: #202d27;
+  --line: #2b3a33;
+  --parchment: #ece6d8;
+  --parchment-dim: #a8ac9e;
+  --copper: #c97b4a;
+  --copper-bright: #e0935f;
+  --verified: #6f9c8f;
+  --danger: #c96a5a;
+
+  /* Type */
+  --face-display: "Fraunces", Georgia, serif;
+  --face-body: "IBM Plex Sans", -apple-system, sans-serif;
+  --face-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+
+  --radius: 3px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink-900);
+  background-image: radial-gradient(circle at 15% 0%, rgba(201, 123, 74, 0.06), transparent 45%);
+  color: var(--parchment);
+  font-family: var(--face-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--face-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.mono {
+  font-family: var(--face-mono);
+  font-size: 0.9em;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--copper-bright);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Address / hash truncation — the recurring on-chain data pattern */
+.hash {
+  font-family: var(--face-mono);
+  color: var(--parchment-dim);
+  font-size: 0.85em;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.65em 1.1em;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--parchment);
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.btn:hover {
+  border-color: var(--copper);
+}
+
+.btn-primary {
+  background: var(--copper);
+  border-color: var(--copper);
+  color: var(--ink-900);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: var(--copper-bright);
+  border-color: var(--copper-bright);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.card {
+  background: var(--ink-800);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--face-mono);
+  font-size: 0.75em;
+  color: var(--verified);
+  border: 1px solid rgba(111, 156, 143, 0.35);
+  border-radius: var(--radius);
+  padding: 0.15em 0.5em;
+}
